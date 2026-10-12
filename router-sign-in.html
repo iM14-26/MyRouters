@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Router Sign-In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#e8ecf0;
+  --panel:#ffffff;
+  --face:#f6f8fa;
+  --ink:#1c2530;
+  --muted:#5f6b78;
+  --line:#cfd6de;
+  --field:#f3f5f8;
+  --btn:#1c2530;
+  --btn-ink:#ffffff;
+  --led-off:#c3cad2;
+  --led:#25c46f;
+  --glow:rgba(37,196,111,.6);
+  --ring:rgba(28,37,48,.18);
+  --warn:#a8510c;
+  --sans:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif;
+  --cond:"Barlow Semi Condensed","Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#11161c; --panel:#192029; --face:#1f2731; --ink:#e7ecf1; --muted:#9aa6b2;
+    --line:#2f3946; --field:#141a21; --btn:#e7ecf1; --btn-ink:#11161c;
+    --led-off:#3a4552; --led:#3ddc84; --glow:rgba(61,220,132,.55);
+    --ring:rgba(231,236,241,.2); --warn:#f0a35a;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--sans);display:flex;justify-content:center;padding:40px 16px 64px}
+main{width:100%;max-width:500px}
+h1{font:700 32px/1.1 var(--cond);letter-spacing:-.01em;margin:0 0 6px}
+.lede{margin:0 0 26px;color:var(--muted)}
+
+/* Router "devices" */
+.devices{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 22px;padding-top:12px}
+.dev{position:relative}
+.dev::before,.dev::after{content:"";position:absolute;top:-12px;width:4px;height:16px;border-radius:2px 2px 0 0;background:var(--line);transition:background .2s}
+.dev::before{left:20px}
+.dev::after{right:20px}
+.dev.is-selected::before,.dev.is-selected::after{background:var(--ink)}
+.pick{all:unset;box-sizing:border-box;position:relative;z-index:1;display:flex;flex-direction:column;width:100%;min-height:128px;padding:14px 12px 12px;border-radius:12px 12px 16px 16px;background:var(--face);border:1.5px solid var(--line);cursor:pointer;text-align:left;transition:border-color .15s, box-shadow .15s}
+.pick:hover{border-color:var(--muted)}
+.pick:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.dev.is-selected .pick{border-color:var(--ink);box-shadow:0 0 0 4px var(--ring)}
+.text{display:block;min-width:0}
+.name{display:block;font:700 18px/1.2 var(--cond);padding-right:26px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ip{display:block;margin-top:2px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.model{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:12px}
+.leds{display:flex;gap:6px}
+.leds i{width:7px;height:7px;border-radius:50%;background:var(--led-off);transition:background .2s, box-shadow .2s}
+.dev.is-selected .leds i{background:var(--led);box-shadow:0 0 6px var(--glow)}
+.dev.is-selected .leds i:nth-child(3){animation:blink 1.2s steps(1) infinite}
+@keyframes blink{50%{opacity:.2}}
+.saved{font-size:12px;font-weight:500;color:var(--muted)}
+.edit{all:unset;position:absolute;z-index:2;top:8px;right:8px;width:30px;height:30px;display:grid;place-items:center;border-radius:8px;color:var(--muted);cursor:pointer}
+.edit:hover{background:var(--field);color:var(--ink)}
+.edit:focus-visible{outline:2px solid var(--ink)}
+.edit svg{width:16px;height:16px}
+
+/* Login panel */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 20px 18px}
+.field{display:block;margin-bottom:16px}
+.field > span{display:block;font-weight:600;font-size:14px;margin-bottom:6px}
+.input{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:10px;outline:none;transition:border-color .15s, box-shadow .15s}
+.input:focus{border-color:var(--ink);box-shadow:0 0 0 3px var(--ring)}
+.pw{position:relative}
+.pw .input{padding-right:76px}
+.reveal{all:unset;position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:6px 10px;border-radius:7px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+.reveal:hover{color:var(--ink);background:var(--panel)}
+.reveal:focus-visible{outline:2px solid var(--ink)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:15px;cursor:pointer}
+.check input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--ink);flex:none}
+.note{margin:6px 0 0 28px;font-size:13px;color:var(--warn)}
+.primary{all:unset;box-sizing:border-box;display:block;width:100%;margin-top:20px;padding:14px 16px;border-radius:11px;background:var(--btn);color:var(--btn-ink);font:600 17px/1.2 var(--sans);text-align:center;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.primary:hover{opacity:.9}
+.primary:active{transform:translateY(1px)}
+.primary:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.sub{display:flex;justify-content:space-between;align-items:baseline;gap:6px 12px;flex-wrap:wrap;margin-top:12px;font-size:14px;color:var(--muted)}
+.target{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.link{all:unset;cursor:pointer;color:var(--ink);font-weight:500;text-decoration:underline;text-underline-offset:3px}
+.link:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:2px}
+.how{margin:18px 4px 0;font-size:14px;color:var(--muted)}
+
+/* Phone help */
+.phone{margin:16px 0 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:14px;color:var(--muted)}
+.phone summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:600;font-size:15px}
+.phone summary::-webkit-details-marker{display:none}
+.phone summary::before{content:"";flex:none;width:7px;height:7px;margin:0 2px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+.phone[open] summary::before{transform:rotate(45deg)}
+.phone summary:focus-visible{outline:2px solid var(--ink);outline-offset:4px;border-radius:4px}
+.phone ol{margin:12px 0 2px;padding-left:20px}
+.phone li{margin:0 0 10px}
+.phone li:last-child{margin-bottom:0}
+.phone b{color:var(--ink);font-weight:600}
+.phone .how-to{display:block;margin-top:4px}
+.bmbtn{all:unset;box-sizing:border-box;display:block;width:100%;margin:14px 0 4px;padding:12px 14px;border-radius:10px;background:var(--btn);color:var(--btn-ink);font:600 16px/1.2 var(--sans);text-align:center;cursor:pointer}
+.bmbtn:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+footer{margin:26px 4px 0;font-size:13px;color:var(--muted);display:flex;gap:4px 10px;flex-wrap:wrap;align-items:baseline}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:24px;z-index:10;transform:translate(-50%,16px);opacity:0;pointer-events:none;width:max-content;max-width:calc(100vw - 32px);background:var(--btn);color:var(--btn-ink);padding:12px 16px;border-radius:10px;font-size:15px;box-shadow:0 8px 24px rgba(0,0,0,.2);transition:opacity .2s, transform .2s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* Edit dialog */
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);padding:22px 20px 18px;width:min(420px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(10,14,18,.5)}
+dialog h2{font:700 24px/1.2 var(--cond);margin:0 0 16px}
+.hint{display:block;font-size:13px;color:var(--muted);margin-top:4px;font-weight:400}
+.dlg-note{margin:4px 0 12px 28px;font-size:13px;color:var(--muted)}
+.check + .check{margin-top:10px}
+.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.btn{all:unset;padding:10px 18px;border-radius:10px;font-weight:600;cursor:pointer}
+.btn.solid{background:var(--btn);color:var(--btn-ink)}
+.btn.plain:hover{background:var(--field)}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* Phone width: routers stack as rows */
+@media (max-width:460px){
+  body{padding-top:28px}
+  .devices{grid-template-columns:1fr;gap:10px;padding-top:0}
+  .dev::before,.dev::after{display:none}
+  .pick{min-height:0;flex-direction:row;align-items:center;gap:12px;padding:14px 50px 14px 14px;border-radius:12px}
+  .text{flex:1}
+  .name{padding-right:0}
+  .foot{margin:0;padding:0;flex-direction:row-reverse;gap:10px}
+  .edit{top:50%;transform:translateY(-50%)}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Router sign-in</h1>
+  <p class="lede">Pick a router, enter its login, and sign in.</p>
+
+  <div class="devices" id="devices" role="radiogroup" aria-label="Router"></div>
+
+  <form class="panel" id="login" autocomplete="off" novalidate>
+    <label class="field">
+      <span>Username</span>
+      <input class="input" id="user" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="admin">
+    </label>
+    <div class="field">
+      <span><label for="pass">Password</label></span>
+      <div class="pw">
+        <input class="input" id="pass" type="password" autocomplete="off">
+        <button type="button" class="reveal" id="reveal" aria-controls="pass">Show</button>
+      </div>
+    </div>
+    <label class="check"><input type="checkbox" id="remember"> Remember this login on this device</label>
+    <p class="note" id="rememberNote" hidden>Saved without encryption in this browser. Only use this on your own device.</p>
+
+    <a class="primary" id="go" href="http://192.168.1.1/" target="router-r1">Sign in</a>
+    <div class="sub">
+      <span>Opens <span class="target" id="target"></span></span>
+      <a class="link" id="openOnly" href="http://192.168.1.1/" target="router-r1">Open without signing in</a>
+    </div>
+  </form>
+
+  <p class="how">Sign in logs you in and opens the router's main screen in a new tab. If a browser blocks pop-ups, allow them for this page. If the router doesn't log in, open it with the link above and paste the password, which is copied for you.</p>
+
+  <details class="phone" id="phoneHelp">
+    <summary>Using a phone?</summary>
+    <ol>
+      <li>Open this file in <b>Chrome</b> or <b>Safari</b>. Buttons can't open the router from inside a file preview or another app.</li>
+      <li>Desktop mode isn't needed. The page goes straight to the router's own login and main screens, which skips its phone redirect.</li>
+    </ol>
+  </details>
+
+  <details class="phone" id="bmHelp" open>
+    <summary>Router won't sign in directly?</summary>
+    <ol>
+      <li>Select the router and type its username and password above, then tap the button below.</li>
+      <li>In Chrome, bookmark any page (⋮ then ☆), edit the bookmark, name it <b>Router login</b> and paste the copied text into the URL box.</li>
+      <li>Tap <b>Open without signing in</b> above. When the router's login page shows, tap the address bar, type <b>Router login</b>, and pick the bookmark with the star icon.</li>
+    </ol>
+    <button type="button" class="bmbtn" id="bmCopy">Copy bookmark for this router</button>
+    <p>Make one bookmark per router, with a different name each. The login is stored in the bookmark as plain text, so only do this on your own device.</p>
+  </details>
+
+  <footer>
+    <span>Remembered logins stay in this browser only.</span>
+    <button type="button" class="link" id="reset">Reset everything</button>
+  </footer>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <form method="dialog">
+    <h2 id="dlgTitle">Edit router</h2>
+    <label class="field">
+      <span>Name</span>
+      <input class="input" id="fName" type="text" maxlength="30" required>
+    </label>
+    <label class="field">
+      <span>Address <span class="hint">For example 192.168.1.1 or 192.168.1.1:8080</span></span>
+      <input class="input" id="fAddr" type="text" required pattern="\S+" autocapitalize="off" spellcheck="false">
+    </label>
+    <label class="field">
+      <span>Model</span>
+      <input class="input" id="fModel" type="text" maxlength="30" autocapitalize="off" spellcheck="false">
+    </label>
+    <label class="check"><input type="checkbox" id="fHttps"> Use https</label>
+    <label class="check"><input type="checkbox" id="fDirect"> Sign in directly (D-Link login)</label>
+    <p class="dlg-note">Sends the login to the router's own sign-in address. The password is sent as an MD5 hash and appears in browser history.</p>
+    <label class="check"><input type="checkbox" id="fAuto"> Put the login in the link</label>
+    <p class="dlg-note">Only helps routers that ask for the login in a browser pop-up. Some browsers show a warning, and the login can appear in your browser history, so it's off by default.</p>
+    <div class="actions">
+      <button class="btn plain" value="cancel" formnovalidate>Cancel</button>
+      <button class="btn solid" value="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "routerSignIn.v2", OLD_KEY = "routerSignIn.v1";
+  var MODEL = "DSL-G2452GE";
+  var DEFAULTS = [
+    { id: "r1", name: "Router 1", address: "192.168.1.1" },
+    { id: "r2", name: "Router 2", address: "192.168.1.2" },
+    { id: "r3", name: "Router 3", address: "192.168.1.3" }
+  ];
+  var PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>';
+
+  function md5(str) {
+    var u = unescape(encodeURIComponent(str)), n = u.length, x = [], i, j, K = [],
+        S = [7,12,17,22,5,9,14,20,4,11,16,23,6,10,15,21];
+    function add(a, b) { var l = (a & 65535) + (b & 65535); return (((a >> 16) + (b >> 16) + (l >> 16)) << 16) | (l & 65535); }
+    function rol(v, c) { return (v << c) | (v >>> (32 - c)); }
+    for (i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 4294967296) | 0;
+    for (i = 0; i < n; i++) x[i >> 2] = (x[i >> 2] || 0) | (u.charCodeAt(i) << ((i % 4) * 8));
+    x[n >> 2] = (x[n >> 2] || 0) | (128 << ((n % 4) * 8));
+    var len = (((n + 8) >>> 6) << 4) + 16;
+    for (i = 0; i < len; i++) x[i] = x[i] | 0;
+    x[len - 2] = n * 8;
+    var a = 1732584193, b = -271733879, c = -1732584194, d = 271733878;
+    for (j = 0; j < len; j += 16) {
+      var A = a, B = b, C = c, D = d, f, g, t;
+      for (i = 0; i < 64; i++) {
+        if (i < 16) { f = (B & C) | (~B & D); g = i; }
+        else if (i < 32) { f = (D & B) | (~D & C); g = (5 * i + 1) % 16; }
+        else if (i < 48) { f = B ^ C ^ D; g = (3 * i + 5) % 16; }
+        else { f = C ^ (B | ~D); g = (7 * i) % 16; }
+        t = D; D = C; C = B;
+        B = add(B, rol(add(add(A, f), add(K[i], x[j + g])), S[(i >> 4) * 4 + (i % 4)]));
+        A = t;
+      }
+      a = add(a, A); b = add(b, B); c = add(c, C); d = add(d, D);
+    }
+    var out = "";
+    [a, b, c, d].forEach(function (w) {
+      for (var k = 0; k < 4; k++) out += ("0" + ((w >>> (k * 8)) & 255).toString(16)).slice(-2);
+    });
+    return out;
+  }
+
+  function $(s) { return document.querySelector(s); }
+  var list = $("#devices"), userEl = $("#user"), passEl = $("#pass"),
+      rememberEl = $("#remember"), noteEl = $("#rememberNote"),
+      goEl = $("#go"), openEl = $("#openOnly"), targetEl = $("#target"),
+      revealEl = $("#reveal"), dlg = $("#dlg");
+
+  var drafts = {};   // unsaved typing per router, kept while the page is open
+  var editing = null;
+  var state = load();
+
+  function fresh() {
+    return {
+      selected: "r1",
+      routers: DEFAULTS.map(function (r) {
+        return { id: r.id, name: r.name, address: r.address, model: MODEL, https: false, auto: false, direct: true, user: "", pass: "", remember: false };
+      })
+    };
+  }
+  function valid(s) { return s && Array.isArray(s.routers) && s.routers.length; }
+  function load() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+    if (!valid(s)) {
+      s = null;
+      try {
+        var old = JSON.parse(localStorage.getItem(OLD_KEY));
+        if (valid(old)) { s = old; s.routers.forEach(function (r) { r.auto = false; }); }
+      } catch (e) {}
+    }
+    if (!s) return fresh();
+    s.routers.forEach(function (r) { if (r.model == null) r.model = MODEL; if (r.direct == null) r.direct = true; });
+    return s;
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+  function current() {
+    for (var i = 0; i < state.routers.length; i++) if (state.routers[i].id === state.selected) return state.routers[i];
+    return state.routers[0];
+  }
+  function byId(id) {
+    for (var i = 0; i < state.routers.length; i++) if (state.routers[i].id === id) return state.routers[i];
+    return null;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function cleanAddr(a) {
+    return String(a || "").replace(/\s+/g, "").replace(/^[a-z]+:\/\//i, "").replace(/\/+$/, "");
+  }
+  function buildUrl(r, user, pass, withLogin) {
+    var addr = cleanAddr(r.address);
+    var auth = "";
+    if (withLogin && r.auto && user) {
+      auth = encodeURIComponent(user) + (pass ? ":" + encodeURIComponent(pass) : "") + "@";
+    }
+    return (r.https ? "https" : "http") + "://" + auth + addr + (addr.indexOf("/") === -1 ? "/" : "");
+  }
+
+  // Real links (not pop-ups) so phones and "desktop mode" browsers open them reliably.
+  function setLinks() {
+    var r = current(), url = buildUrl(r, "", "", false), tab = "router-" + r.id;
+    goEl.href = url; goEl.target = tab;
+    openEl.href = url + "cgi-bin/Login.asp"; openEl.target = tab;
+    goEl.textContent = "Sign in to " + r.name;
+    targetEl.textContent = url;
+  }
+
+  function render() {
+    list.innerHTML = state.routers.map(function (r) {
+      var sel = r.id === state.selected;
+      return '<div class="dev' + (sel ? " is-selected" : "") + '">' +
+        '<button type="button" class="pick" role="radio" aria-checked="' + sel + '" tabindex="' + (sel ? 0 : -1) + '" data-id="' + r.id + '">' +
+          '<span class="text"><span class="name">' + esc(r.name) + '</span>' +
+            '<span class="ip">' + esc(cleanAddr(r.address)) + '</span>' +
+            (r.model ? '<span class="model">' + esc(r.model) + '</span>' : "") + '</span>' +
+          '<span class="foot"><span class="leds" aria-hidden="true"><i></i><i></i><i></i></span>' +
+          (r.pass ? '<span class="saved">Saved</span>' : "") + '</span>' +
+        '</button>' +
+        '<button type="button" class="edit" data-edit="' + r.id + '" aria-label="Edit ' + esc(r.name) + '" title="Edit">' + PENCIL + '</button>' +
+      '</div>';
+    }).join("");
+    setLinks();
+  }
+
+  function fillFields() {
+    var r = current(), d = drafts[r.id];
+    userEl.value = d ? d.user : (r.user || "");
+    passEl.value = d ? d.pass : (r.pass || "");
+    rememberEl.checked = !!r.remember;
+    noteEl.hidden = !r.remember;
+  }
+
+  function select(id, focus) {
+    if (id !== state.selected && byId(id)) {
+      var prev = current();
+      drafts[prev.id] = { user: userEl.value, pass: passEl.value };
+      state.selected = id;
+      save();
+      render();
+      fillFields();
+    }
+    if (focus) {
+      var b = list.querySelector('.pick[data-id="' + id + '"]');
+      if (b) b.focus();
+    }
+  }
+
+  function copyText(t) {
+    var ok = false;
+    var ta = document.createElement("textarea");
+    ta.value = t;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).catch(function () {});
+      ok = true;
+    }
+    return ok;
+  }
+
+  var toastTimer;
+  function toast(msg) {
+    var t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 4500);
+  }
+
+  // Choosing a router
+  list.addEventListener("click", function (e) {
+    var ed = e.target.closest(".edit");
+    if (ed) { openEdit(ed.getAttribute("data-edit")); return; }
+    var p = e.target.closest(".pick");
+    if (p) select(p.getAttribute("data-id"), true);
+  });
+  list.addEventListener("keydown", function (e) {
+    if (!e.target.classList.contains("pick")) return;
+    var step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    var rs = state.routers, i = 0;
+    for (var k = 0; k < rs.length; k++) if (rs[k].id === state.selected) i = k;
+    select(rs[(i + step + rs.length) % rs.length].id, true);
+  });
+
+  // Sign in: the link itself opens the router; this runs first.
+  goEl.addEventListener("click", function (e) {
+    var r = current(), user = userEl.value.trim(), pass = passEl.value;
+    r.user = user;
+    if (rememberEl.checked) { r.pass = pass; r.remember = true; }
+    else { r.pass = ""; r.remember = false; }
+    drafts[r.id] = { user: userEl.value, pass: pass };
+    save();
+    if (r.direct && user && pass) {
+      e.preventDefault();
+      var base = buildUrl(r, "", "", false).replace(/\/$/, "");
+      var u = (user === "telecomadmin" || user === "N/A") ? "SuperAdmin" : user;
+      var w = window.open(base + "/cgi-bin/Login.asp?User=" + encodeURIComponent(u) + "&Pwd=" + md5(pass), "router-" + r.id);
+      if (w) {
+        setTimeout(function () { try { w.location.href = base + "/?mobile=true"; } catch (x) {} }, 1000);
+        toast("Signing in to " + r.name + ".");
+      } else {
+        toast("Pop-up blocked. Allow pop-ups for this page and try again.");
+      }
+      return;
+    }
+    var copied = pass ? copyText(pass) : false;
+    if (r.auto && user) goEl.href = buildUrl(r, user, pass, true);
+    setTimeout(render, 0);   // puts the plain address back on the link
+    toast(copied ? "Opening " + r.name + ". Password copied, paste it into the login box."
+                 : "Opening " + r.name + ".");
+  });
+  $("#login").addEventListener("submit", function (e) { e.preventDefault(); });
+  [userEl, passEl].forEach(function (el) {
+    el.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); goEl.click(); }
+    });
+  });
+
+  // Bookmarklet for routers that need the newer two-step login
+  $("#bmCopy").addEventListener("click", function () {
+    var user = userEl.value.trim(), pass = passEl.value;
+    if (!user || !pass) { toast("Type the username and password first."); return; }
+    var code = "(function(){var U=" + JSON.stringify(user) + ",P=" + JSON.stringify(pass) + ";" +
+      "if(typeof hex_md5!=='function'){alert('Open the router login page first');return}" +
+      "fetch('/cgi-bin/get/New_GUI/get_sessionKey.asp').then(function(r){return r.text()}).then(function(k){" +
+      "var b=new URLSearchParams();b.append('sessionKey',k);b.append('UserName',U);b.append('UserPass',hex_md5(P));b.append('User_Flag','1');" +
+      "return fetch('/cgi-bin/Login_success_error.asp',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:b})})" +
+      ".then(function(r){return r.text()}).then(function(d){d=parseInt(d,10);" +
+      "if(d===0)location.href='/?mobile=true';else alert(d===3?'Router is locked. Wait and try again.':'Wrong username or password.')})" +
+      ".catch(function(e){alert('Sign-in failed: '+e)})})()";
+    var ok = copyText("javascript:" + encodeURIComponent(code));
+    toast(ok ? "Bookmark copied for " + current().name + ". Paste it into a bookmark's URL box." : "Couldn't copy. Try again.");
+  });
+
+  revealEl.addEventListener("click", function () {
+    var show = passEl.type === "password";
+    passEl.type = show ? "text" : "password";
+    revealEl.textContent = show ? "Hide" : "Show";
+  });
+
+  // Remember login
+  rememberEl.addEventListener("change", function () {
+    var r = current();
+    noteEl.hidden = !rememberEl.checked;
+    if (rememberEl.checked) {
+      r.remember = true; r.user = userEl.value.trim(); r.pass = passEl.value;
+      save(); render();
+      if (r.pass) toast("Login saved for " + r.name + ".");
+    } else {
+      var had = !!r.pass;
+      r.remember = false; r.pass = "";
+      save(); render();
+      if (had) toast("Saved login removed for " + r.name + ".");
+    }
+  });
+  function keepIfRemembered() {
+    var r = current();
+    if (!r.remember) return;
+    r.user = userEl.value.trim(); r.pass = passEl.value;
+    save(); render();
+  }
+  userEl.addEventListener("change", keepIfRemembered);
+  passEl.addEventListener("change", keepIfRemembered);
+
+  // Edit a router
+  function openEdit(id) {
+    var r = byId(id);
+    if (!r) return;
+    editing = id;
+    $("#fName").value = r.name;
+    $("#fAddr").value = r.address;
+    $("#fModel").value = r.model || "";
+    $("#fHttps").checked = !!r.https;
+    $("#fAuto").checked = !!r.auto;
+    $("#fDirect").checked = !!r.direct;
+    dlg.returnValue = "";
+    if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+  }
+  dlg.addEventListener("close", function () {
+    if (dlg.returnValue === "save" && editing) {
+      var r = byId(editing);
+      var name = $("#fName").value.trim(), addr = cleanAddr($("#fAddr").value);
+      if (r) {
+        if (name) r.name = name;
+        if (addr) r.address = addr;
+        r.model = $("#fModel").value.trim();
+        r.https = $("#fHttps").checked;
+        r.auto = $("#fAuto").checked;
+        r.direct = $("#fDirect").checked;
+        save(); render();
+        toast("Saved changes to " + r.name + ".");
+      }
+    }
+    editing = null;
+    dlg.returnValue = "";
+  });
+
+  // Reset
+  $("#reset").addEventListener("click", function () {
+    if (!confirm("Reset all routers to their original names and addresses, and remove saved logins?")) return;
+    try { localStorage.removeItem(KEY); localStorage.removeItem(OLD_KEY); } catch (e) {}
+    state = fresh();
+    drafts = {};
+    render(); fillFields();
+    toast("Everything reset.");
+  });
+
+  // Show the phone tips open on touch screens.
+  try { if (window.matchMedia("(pointer: coarse)").matches) $("#phoneHelp").open = true; } catch (e) {}
+
+  render();
+  fillFields();
+})();
+</script>
+</body>
+</html>
