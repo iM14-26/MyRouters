@@ -338,7 +338,7 @@ dialog h2{font:700 24px/1.2 var(--cond);margin:0 0 16px}
   function setLinks() {
     var r = current(), url = buildUrl(r, "", "", false), tab = "router-" + r.id;
     goEl.href = url; goEl.target = tab;
-    openEl.href = url + "cgi-bin/Login.asp"; openEl.target = tab;
+    openEl.href = r.direct ? url + "cgi-bin/Login.asp" : url + "?mobile=true"; openEl.target = tab;
     goEl.textContent = "Sign in to " + r.name;
     targetEl.textContent = url;
   }
@@ -467,12 +467,12 @@ dialog h2{font:700 24px/1.2 var(--cond);margin:0 0 16px}
     var user = userEl.value.trim(), pass = passEl.value;
     if (!user || !pass) { toast("Type the username and password first."); return; }
     var code = "(function(){var U=" + JSON.stringify(user) + ",P=" + JSON.stringify(pass) + ";" +
-      "if(typeof hex_md5!=='function'){alert('Open the router login page first');return}" +
+      "var w=window.frames['fInfo']||window;if(typeof w.hex_md5!=='function'){alert('Open the router login page first');return}" +
       "fetch('/cgi-bin/get/New_GUI/get_sessionKey.asp').then(function(r){return r.text()}).then(function(k){" +
-      "var b=new URLSearchParams();b.append('sessionKey',k);b.append('UserName',U);b.append('UserPass',hex_md5(P));b.append('User_Flag','1');" +
+      "var b=new URLSearchParams();b.append('sessionKey',k);b.append('UserName',U);b.append('UserPass',w.hex_md5(P));b.append('User_Flag','1');" +
       "return fetch('/cgi-bin/Login_success_error.asp',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:b})})" +
       ".then(function(r){return r.text()}).then(function(d){d=parseInt(d,10);" +
-      "if(d===0)location.href='/?mobile=true';else alert(d===3?'Router is locked. Wait and try again.':'Wrong username or password.')})" +
+      "if(d===0)w.location.href='/cgi-bin/New_GUI/Home.asp';else alert(d===3?'Router is locked. Wait and try again.':'Wrong username or password.')})" +
       ".catch(function(e){alert('Sign-in failed: '+e)})})()";
     var ok = copyText("javascript:" + encodeURIComponent(code));
     toast(ok ? "Bookmark copied for " + current().name + ". Paste it into a bookmark's URL box." : "Couldn't copy. Try again.");
